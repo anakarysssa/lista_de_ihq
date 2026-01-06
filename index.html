@@ -60,7 +60,7 @@
         <label>Senha
           <input id="password" type="password" placeholder="••••••••" />
         </label>
-       <button id="btnLogin" onclick="alert('cliquei!')">Entrar</button>
+       <button id="btnLogin" onclick="login()">Entrar</button>
         <button id="btnSignup" class="secondary">Criar usuário</button>
       </div>
       <p id="authMsg" class="muted"></p>
@@ -177,12 +177,16 @@
     const search = document.getElementById("search");
     const filterStatus = document.getElementById("filterStatus");
 
-    document.getElementById("btnLogin").onclick = login;
-    document.getElementById("btnSignup").onclick = signup;
-    btnLogout.onclick = logout;
-    document.getElementById("btnAdd").onclick = addRegistro;
-    document.getElementById("btnRefresh").onclick = loadRegistros;
+    document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("btnLogin").onclick = login;
+  document.getElementById("btnSignup").onclick = signup;
+  document.getElementById("btnLogout").onclick = logout;
+  document.getElementById("btnAdd").onclick = addRegistro;
+  document.getElementById("btnRefresh").onclick = loadRegistros;
 
+ console.log("Cliquei Entrar ✅");
+});
+window.login = login;
     let cache = [];
 
     function toISODate(value) {
@@ -390,4 +394,5 @@
 <div style="position:fixed;bottom:10px;right:10px;background:#ff0;padding:6px 10px;border:1px solid #000;z-index:99999">
   VERSÃO 002
 </div>
+
 
