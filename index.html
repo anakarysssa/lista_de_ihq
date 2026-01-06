@@ -148,6 +148,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+  console.log("supabase-js carregou?", !!window.supabase);
+</script>
+
+  <script>
     // CONFIG
     const SUPABASE_URL = "https://guahceakslkppogyzlbd.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_oNBrPmLsqX3qUgsAug-fdg_c0rCasv-";
@@ -300,15 +304,34 @@ window.login = login;
       authMsg.textContent = error ? ("Erro: " + error.message) : "Usuário criado. Se exigir confirmação por e-mail, verifique sua caixa de entrada.";
     }
 
-    async function login() {
-      authMsg.textContent = "Entrando...";
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.value.trim(),
-        password: password.value
-      });
-      authMsg.textContent = error ? ("Erro: " + error.message) : "";
-      await setUIForSession();
+  async function login() {
+  const e = email.value.trim();
+  authMsg.textContent = "Entrando...";
+  console.log("Clique Entrar ✅", e);
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: e,
+      password: password.value
+    });
+
+    console.log("signInWithPassword retorno:", { data, error });
+
+    if (error) {
+      authMsg.textContent = "Erro: " + error.message;
+      alert("Erro no login: " + error.message);
+      return;
     }
+
+    authMsg.textContent = "Login OK ✅";
+    await setUIForSession();
+  } catch (err) {
+    console.error("Exceção login:", err);
+    authMsg.textContent = "Falha inesperada: " + (err?.message || String(err));
+    alert("Falha inesperada: " + (err?.message || String(err)));
+  }
+}
+
 
     async function logout() {
       await supabase.auth.signOut();
@@ -394,5 +417,6 @@ window.login = login;
 <div style="position:fixed;bottom:10px;right:10px;background:#ff0;padding:6px 10px;border:1px solid #000;z-index:99999">
   VERSÃO 002
 </div>
+
 
 
