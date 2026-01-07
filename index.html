@@ -42,11 +42,15 @@
     .w-300 { min-width: 300px; }
   </style>
 </head>
+
 <body>
+  <!-- DEBUG PANEL (fica dentro do body) -->
+  <pre id="debug" style="position:fixed;bottom:10px;left:10px;max-width:60vw;max-height:35vh;overflow:auto;background:#fff;border:1px solid #000;padding:8px;z-index:999999;font-size:12px;"></pre>
+
   <div class="card">
     <div class="row">
       <h2 style="margin: 0;">ULAP — Controle de Solicitações IHQ</h2>
-     <button id="btnLogout" type="button" class="secondary right hidden">Sair</button>
+      <button id="btnLogout" type="button" class="secondary right hidden">Sair</button>
     </div>
     <p class="muted" style="margin-top: 6px;">Login obrigatório. Hospedado no GitHub Pages + dados no Supabase.</p>
 
@@ -60,8 +64,8 @@
         <label>Senha
           <input id="password" type="password" placeholder="••••••••" />
         </label>
-       <button id="btnLogin" type="button">Entrar</button>
-      <button id="btnSignup" type="button" class="secondary">Criar usuário</button>
+        <button id="btnLogin" type="button">Entrar</button>
+        <button id="btnSignup" type="button" class="secondary">Criar usuário</button>
       </div>
       <p id="authMsg" class="muted"></p>
     </div>
@@ -110,7 +114,7 @@
           </select>
         </label>
 
-       <button id="btnAdd" type="button">Adicionar</button>
+        <button id="btnAdd" type="button">Adicionar</button>
       </div>
 
       <div class="toolbar">
@@ -146,18 +150,40 @@
     </div>
   </div>
 
+  <!-- Versão -->
+  <div style="position:fixed;bottom:10px;right:10px;background:#ff0;padding:6px 10px;border:1px solid #000;z-index:99999">
+    VERSÃO 003 (debug auth)
+  </div>
+
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-  console.log("supabase-js carregou?", !!window.supabase);
-</script>
 
   <script>
-    // CONFIG
+    // Debug helper
+    const dbg = document.getElementById("debug");
+    function logDbg(...a){
+      const line = a.map(x => typeof x === "string" ? x : JSON.stringify(x)).join(" ");
+      dbg.textContent += line + "\n";
+      console.log(line);
+    }
+    window.addEventListener("error", (e)=>logDbg("ERRO:", e.message));
+    window.addEventListener("unhandledrejection", (e)=>logDbg("PROMISE:", e.reason?.message || String(e.reason)));
+    logDbg("DEBUG: página carregou ✅");
+    logDbg("DEBUG: supabase-js carregou?", !!window.supabase);
+
+    // CONFIG (ATENÇÃO: troque a key pela ANON PUBLIC KEY que começa com 'eyJ...')
     const SUPABASE_URL = "https://guahceakslkppogyzlbd.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_oNBrPmLsqX3qUgsAug-fdg_c0rCasv-";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_ANON_KEY = "COLE_AQUI_A_ANON_PUBLIC_KEY_DO_SUPABASE_(eyJ...)";
 
-    // UI
+    let supabase;
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      logDbg("DEBUG: supabase client criado ✅");
+    } catch (e) {
+      logDbg("DEBUG: falha criando supabase client ❌", e?.message || String(e));
+    }
+
+    // UI refs
     const authBox = document.getElementById("authBox");
     const appBox = document.getElementById("appBox");
     const authMsg = document.getElementById("authMsg");
@@ -181,22 +207,9 @@
     const search = document.getElementById("search");
     const filterStatus = document.getElementById("filterStatus");
 
-    document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnLogin").onclick = login;
-  document.getElementById("btnSignup").onclick = signup;
-  document.getElementById("btnLogout").onclick = logout;
-  document.getElementById("btnAdd").onclick = addRegistro;
-  document.getElementById("btnRefresh").onclick = loadRegistros;
-
- console.log("Cliquei Entrar ✅");
-});
-window.login = login;
     let cache = [];
 
-    function toISODate(value) {
-      // value already "YYYY-MM-DD" or empty
-      return value ? value : null;
-    }
+    function toISODate(value) { return value ? value : null; }
 
     function escapeHtml(str) {
       return String(str ?? "")
@@ -256,22 +269,21 @@ window.login = login;
           <td>${escapeHtml(r.painel_anticorpos ?? "")}</td>
           <td>${escapeHtml(r.numero_ihq ?? "")}</td>
           <td>
-            <button class="secondary" data-del="${r.id}">Excluir</button>
+            <button type="button" class="secondary" data-del="${r.id}">Excluir</button>
           </td>
         `;
 
-        // toggle status
         tr.querySelector('input[type="checkbox"]').addEventListener("change", async (ev) => {
           const id = Number(ev.target.getAttribute("data-id"));
           const ja_cadastrado = ev.target.checked;
           await updateStatus(id, ja_cadastrado);
-          // update local cache
+
           const idx = cache.findIndex(x => x.id === id);
           if (idx >= 0) cache[idx].ja_cadastrado = ja_cadastrado;
+
           applyFiltersAndRender();
         });
 
-        // delete
         tr.querySelector('button[data-del]').addEventListener("click", async (ev) => {
           const id = Number(ev.target.getAttribute("data-del"));
           if (!confirm("Excluir este registro?")) return;
@@ -285,7 +297,9 @@ window.login = login;
     }
 
     async function setUIForSession() {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      logDbg("DEBUG: getSession", { hasSession: !!session, error: error?.message });
+
       const logged = !!session;
       authBox.classList.toggle("hidden", logged);
       appBox.classList.toggle("hidden", !logged);
@@ -297,44 +311,49 @@ window.login = login;
 
     async function signup() {
       authMsg.textContent = "Criando usuário...";
+      logDbg("DEBUG: signup start", email.value.trim());
+
       const { error } = await supabase.auth.signUp({
         email: email.value.trim(),
         password: password.value
       });
-      authMsg.textContent = error ? ("Erro: " + error.message) : "Usuário criado. Se exigir confirmação por e-mail, verifique sua caixa de entrada.";
+
+      if (error) {
+        authMsg.textContent = "Erro: " + error.message;
+        logDbg("DEBUG: signup error", error.message);
+        alert("Erro no cadastro: " + error.message);
+        return;
+      }
+
+      authMsg.textContent = "Usuário criado. Tente entrar.";
+      logDbg("DEBUG: signup ok ✅");
     }
 
-  async function login() {
-  const e = email.value.trim();
-  authMsg.textContent = "Entrando...";
-  console.log("Clique Entrar ✅", e);
+    async function login() {
+      const e = email.value.trim();
+      authMsg.textContent = "Entrando...";
+      logDbg("DEBUG: login click ✅", e);
 
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: e,
-      password: password.value
-    });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: e,
+        password: password.value
+      });
 
-    console.log("signInWithPassword retorno:", { data, error });
+      logDbg("DEBUG: signIn retorno", { ok: !error, error: error?.message });
 
-    if (error) {
-      authMsg.textContent = "Erro: " + error.message;
-      alert("Erro no login: " + error.message);
-      return;
+      if (error) {
+        authMsg.textContent = "Erro: " + error.message;
+        alert("Erro no login: " + error.message);
+        return;
+      }
+
+      authMsg.textContent = "Login OK ✅";
+      await setUIForSession();
     }
-
-    authMsg.textContent = "Login OK ✅";
-    await setUIForSession();
-  } catch (err) {
-    console.error("Exceção login:", err);
-    authMsg.textContent = "Falha inesperada: " + (err?.message || String(err));
-    alert("Falha inesperada: " + (err?.message || String(err)));
-  }
-}
-
 
     async function logout() {
       await supabase.auth.signOut();
+      logDbg("DEBUG: logout ✅");
       await setUIForSession();
     }
 
@@ -358,7 +377,6 @@ window.login = login;
       const { error } = await supabase.from("ulap_ihq").insert(payload);
       if (error) { appMsg.textContent = "Erro ao adicionar: " + error.message; return; }
 
-      // limpar
       f_data_entrada_ulap.value = "";
       f_numero_histopatologico.value = "";
       f_paciente.value = "";
@@ -403,20 +421,25 @@ window.login = login;
       applyFiltersAndRender();
     }
 
-    // filtros
-    search.addEventListener("input", applyFiltersAndRender);
-    filterStatus.addEventListener("change", applyFiltersAndRender);
+    // Bind events (sem depender de ordem de script)
+    document.addEventListener("DOMContentLoaded", () => {
+      logDbg("DEBUG: DOMContentLoaded ✅");
 
-    // sync auth
-    supabase.auth.onAuthStateChange(() => setUIForSession());
-    setUIForSession();
+      document.getElementById("btnLogin").addEventListener("click", login);
+      document.getElementById("btnSignup").addEventListener("click", signup);
+      document.getElementById("btnLogout").addEventListener("click", logout);
+      document.getElementById("btnAdd").addEventListener("click", addRegistro);
+      document.getElementById("btnRefresh").addEventListener("click", loadRegistros);
+
+      search.addEventListener("input", applyFiltersAndRender);
+      filterStatus.addEventListener("change", applyFiltersAndRender);
+
+      supabase.auth.onAuthStateChange(() => setUIForSession());
+      setUIForSession();
+    });
   </script>
 </body>
 </html>
-
-<div style="position:fixed;bottom:10px;right:10px;background:#ff0;padding:6px 10px;border:1px solid #000;z-index:99999">
-  VERSÃO 002
-</div>
 
 
 
