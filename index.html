@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ULAP — Lista IHQ</title>
+  
+  <!-- Favicon inline para evitar erro 404 -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔬</text></svg>">
+  
   <style>
     body { font-family: system-ui, Arial; margin: 24px; background: #fafafa; }
     .card { max-width: 1180px; margin: 0 auto; padding: 16px; border: 1px solid #ddd; border-radius: 14px; background: #fff; }
@@ -54,23 +58,23 @@
     </div>
     <p class="muted" style="margin-top: 6px;">Login obrigatório. Hospedado no GitHub Pages + dados no Supabase.</p>
 
-       <!-- LOGIN -->
-<div id="authBox">
-  <h3>Login</h3>
-  <form id="loginForm" onsubmit="return false;">
-    <div class="row">
-      <label>E-mail
-        <input id="email" type="email" placeholder="seu@email.com" required />
-      </label>
-      <label>Senha
-        <input id="password" type="password" placeholder="••••••••" required />
-      </label>
-      <button id="btnLogin" type="submit">Entrar</button>
-      <button id="btnSignup" type="button" class="secondary">Criar usuário</button>
+    <!-- LOGIN -->
+    <div id="authBox">
+      <h3>Login</h3>
+      <form id="loginForm" onsubmit="return false;">
+        <div class="row">
+          <label>E-mail
+            <input id="email" type="email" placeholder="seu@email.com" required />
+          </label>
+          <label>Senha
+            <input id="password" type="password" placeholder="••••••••" required />
+          </label>
+          <button id="btnLogin" type="submit">Entrar</button>
+          <button id="btnSignup" type="button" class="secondary">Criar usuário</button>
+        </div>
+      </form>
+      <p id="authMsg" class="muted"></p>
     </div>
-  </form>
-  <p id="authMsg" class="muted"></p>
-</div>
 
     <!-- APP -->
     <div id="appBox" class="hidden">
@@ -154,319 +158,336 @@
 
   <!-- Versão -->
   <div style="position:fixed;bottom:10px;right:10px;background:#ff0;padding:6px 10px;border:1px solid #000;z-index:99999">
-    VERSÃO 003 (debug auth)
+    VERSÃO 004 (correções login)
   </div>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-   // CONFIG (ATENÇÃO: troque a key pela ANON PUBLIC KEY que começa com 'eyJ...')
-const SUPABASE_URL = "https://guahceakslkppogyzlbd.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1YWhjZWFrc2xrcHBvZ3l6bGJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2Mzg0NjAsImV4cCI6MjA4MzIxNDQ2MH0.LwmRtZKO7vG_LPuyANt4hUjtFElxH5IsNieZcRkFn_g";
+    // Debug helper
+    const dbg = document.getElementById("debug");
+    function logDbg(...a){
+      const line = a.map(x => typeof x === "string" ? x : JSON.stringify(x)).join(" ");
+      dbg.textContent += line + "\n";
+      console.log(line);
+    }
+    window.addEventListener("error", (e)=>logDbg("ERRO:", e.message));
+    window.addEventListener("unhandledrejection", (e)=>logDbg("PROMISE:", e.reason?.message || String(e.reason)));
+    logDbg("DEBUG: página carregou ✅");
+    logDbg("DEBUG: supabase-js carregou?", !!window.supabase);
 
-// Verifica se já existe uma instância do Supabase para evitar duplicação
-let supabase;
-if (window.supabaseClientInstance) {
-  supabase = window.supabaseClientInstance;
-  logDbg("DEBUG: usando cliente supabase existente ✅");
-} else {
-  try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    window.supabaseClientInstance = supabase; // Armazena globalmente
-    logDbg("DEBUG: supabase client criado ✅");
-  } catch (e) {
-    logDbg("DEBUG: falha criando supabase client ❌", e?.message || String(e));
-  }
-}
+    // CONFIG
+    const SUPABASE_URL = "https://guahceakslkppogyzlbd.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1YWhjZWFrc2xrcHBvZ3l6bGJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2Mzg0NjAsImV4cCI6MjA4MzIxNDQ2MH0.LwmRtZKO7vG_LPuyANt4hUjtFElxH5IsNieZcRkFn_g";
 
-// UI refs
-const authBox = document.getElementById("authBox");
-const appBox = document.getElementById("appBox");
-const authMsg = document.getElementById("authMsg");
-const appMsg  = document.getElementById("appMsg");
-const tbody   = document.getElementById("tbody");
+    // Verifica se já existe uma instância do Supabase para evitar duplicação
+    let supabase;
+    if (window.supabaseClientInstance) {
+      supabase = window.supabaseClientInstance;
+      logDbg("DEBUG: usando cliente supabase existente ✅");
+    } else {
+      try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        window.supabaseClientInstance = supabase; // Armazena globalmente
+        logDbg("DEBUG: supabase client criado ✅");
+      } catch (e) {
+        logDbg("DEBUG: falha criando supabase client ❌", e?.message || String(e));
+      }
+    }
 
-const btnLogout = document.getElementById("btnLogout");
-const email = document.getElementById("email");
-const password = document.getElementById("password");
+    // UI refs
+    const authBox = document.getElementById("authBox");
+    const appBox = document.getElementById("appBox");
+    const authMsg = document.getElementById("authMsg");
+    const appMsg  = document.getElementById("appMsg");
+    const tbody   = document.getElementById("tbody");
 
-const f_data_entrada_ulap = document.getElementById("data_entrada_ulap");
-const f_numero_histopatologico = document.getElementById("numero_histopatologico");
-const f_paciente = document.getElementById("paciente");
-const f_matricula_numero = document.getElementById("matricula_numero");
-const f_data_solicitacao = document.getElementById("data_solicitacao");
-const f_painel_anticorpos = document.getElementById("painel_anticorpos");
-const f_medico_patologista = document.getElementById("medico_patologista");
-const f_ja_cadastrado = document.getElementById("ja_cadastrado");
-const f_numero_ihq = document.getElementById("numero_ihq");
+    const btnLogout = document.getElementById("btnLogout");
+    const email = document.getElementById("email");
+    const password = document.getElementById("password");
 
-const search = document.getElementById("search");
-const filterStatus = document.getElementById("filterStatus");
+    const f_data_entrada_ulap = document.getElementById("data_entrada_ulap");
+    const f_numero_histopatologico = document.getElementById("numero_histopatologico");
+    const f_paciente = document.getElementById("paciente");
+    const f_matricula_numero = document.getElementById("matricula_numero");
+    const f_data_solicitacao = document.getElementById("data_solicitacao");
+    const f_painel_anticorpos = document.getElementById("painel_anticorpos");
+    const f_medico_patologista = document.getElementById("medico_patologista");
+    const f_ja_cadastrado = document.getElementById("ja_cadastrado");
+    const f_numero_ihq = document.getElementById("numero_ihq");
 
-let cache = [];
+    const search = document.getElementById("search");
+    const filterStatus = document.getElementById("filterStatus");
 
-function toISODate(value) { return value ? value : null; }
+    let cache = [];
 
-function escapeHtml(str) {
-  return String(str ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+    function toISODate(value) { return value ? value : null; }
 
-function applyFiltersAndRender() {
-  const q = search.value.trim().toLowerCase();
-  const status = filterStatus.value;
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
 
-  const filtered = cache.filter(r => {
-    const hay = [
-      r.paciente, r.numero_histopatologico, r.matricula_numero,
-      r.numero_ihq, r.medico_patologista, r.painel_anticorpos
-    ].join(" ").toLowerCase();
+    function applyFiltersAndRender() {
+      const q = search.value.trim().toLowerCase();
+      const status = filterStatus.value;
 
-    const matchQ = !q || hay.includes(q);
-    const matchStatus =
-      status === "all" ||
-      (status === "done" && r.ja_cadastrado) ||
-      (status === "pending" && !r.ja_cadastrado);
+      const filtered = cache.filter(r => {
+        const hay = [
+          r.paciente, r.numero_histopatologico, r.matricula_numero,
+          r.numero_ihq, r.medico_patologista, r.painel_anticorpos
+        ].join(" ").toLowerCase();
 
-    return matchQ && matchStatus;
-  });
+        const matchQ = !q || hay.includes(q);
+        const matchStatus =
+          status === "all" ||
+          (status === "done" && r.ja_cadastrado) ||
+          (status === "pending" && !r.ja_cadastrado);
 
-  renderTable(filtered);
-}
+        return matchQ && matchStatus;
+      });
 
-function renderTable(rows) {
-  tbody.innerHTML = "";
-  for (const r of rows) {
-    const tr = document.createElement("tr");
-    tr.className = r.ja_cadastrado ? "done" : "pending";
+      renderTable(filtered);
+    }
 
-    const tag = r.ja_cadastrado
-      ? `<span class="tag done">Cadastrado</span>`
-      : `<span class="tag pending">Pendente</span>`;
+    function renderTable(rows) {
+      tbody.innerHTML = "";
+      for (const r of rows) {
+        const tr = document.createElement("tr");
+        tr.className = r.ja_cadastrado ? "done" : "pending";
 
-    tr.innerHTML = `
-      <td>
-        ${tag}<br/>
-        <label style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-          <input type="checkbox" ${r.ja_cadastrado ? "checked" : ""} data-id="${r.id}" />
-          <span class="muted">marcar</span>
-        </label>
-      </td>
-      <td>${escapeHtml(r.data_entrada_ulap ?? "")}</td>
-      <td>${escapeHtml(r.data_solicitacao ?? "")}</td>
-      <td><b>${escapeHtml(r.numero_histopatologico)}</b></td>
-      <td>${escapeHtml(r.paciente)}</td>
-      <td>${escapeHtml(r.matricula_numero ?? "")}</td>
-      <td>${escapeHtml(r.medico_patologista ?? "")}</td>
-      <td>${escapeHtml(r.painel_anticorpos ?? "")}</td>
-      <td>${escapeHtml(r.numero_ihq ?? "")}</td>
-      <td>
-        <button type="button" class="secondary" data-del="${r.id}">Excluir</button>
-      </td>
-    `;
+        const tag = r.ja_cadastrado
+          ? `<span class="tag done">Cadastrado</span>`
+          : `<span class="tag pending">Pendente</span>`;
 
-    tr.querySelector('input[type="checkbox"]').addEventListener("change", async (ev) => {
-      const id = Number(ev.target.getAttribute("data-id"));
-      const ja_cadastrado = ev.target.checked;
-      await updateStatus(id, ja_cadastrado);
+        tr.innerHTML = `
+          <td>
+            ${tag}<br/>
+            <label style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+              <input type="checkbox" ${r.ja_cadastrado ? "checked" : ""} data-id="${r.id}" />
+              <span class="muted">marcar</span>
+            </label>
+          </td>
+          <td>${escapeHtml(r.data_entrada_ulap ?? "")}</td>
+          <td>${escapeHtml(r.data_solicitacao ?? "")}</td>
+          <td><b>${escapeHtml(r.numero_histopatologico)}</b></td>
+          <td>${escapeHtml(r.paciente)}</td>
+          <td>${escapeHtml(r.matricula_numero ?? "")}</td>
+          <td>${escapeHtml(r.medico_patologista ?? "")}</td>
+          <td>${escapeHtml(r.painel_anticorpos ?? "")}</td>
+          <td>${escapeHtml(r.numero_ihq ?? "")}</td>
+          <td>
+            <button type="button" class="secondary" data-del="${r.id}">Excluir</button>
+          </td>
+        `;
 
-      const idx = cache.findIndex(x => x.id === id);
-      if (idx >= 0) cache[idx].ja_cadastrado = ja_cadastrado;
+        tr.querySelector('input[type="checkbox"]').addEventListener("change", async (ev) => {
+          const id = Number(ev.target.getAttribute("data-id"));
+          const ja_cadastrado = ev.target.checked;
+          await updateStatus(id, ja_cadastrado);
 
+          const idx = cache.findIndex(x => x.id === id);
+          if (idx >= 0) cache[idx].ja_cadastrado = ja_cadastrado;
+
+          applyFiltersAndRender();
+        });
+
+        tr.querySelector('button[data-del]').addEventListener("click", async (ev) => {
+          const id = Number(ev.target.getAttribute("data-del"));
+          if (!confirm("Excluir este registro?")) return;
+          await deleteRegistro(id);
+          cache = cache.filter(x => x.id !== id);
+          applyFiltersAndRender();
+        });
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function setUIForSession() {
+      if (!supabase) {
+        logDbg("DEBUG: supabase não está definido!");
+        return;
+      }
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      logDbg("DEBUG: getSession", { hasSession: !!session, error: error?.message });
+
+      const logged = !!session;
+      authBox.classList.toggle("hidden", logged);
+      appBox.classList.toggle("hidden", !logged);
+      btnLogout.classList.toggle("hidden", !logged);
+
+      if (logged) await loadRegistros();
+      else { cache = []; tbody.innerHTML = ""; }
+    }
+
+    async function signup() {
+      if (!supabase) {
+        authMsg.textContent = "Erro: Cliente Supabase não inicializado";
+        return;
+      }
+      
+      authMsg.textContent = "Criando usuário...";
+      logDbg("DEBUG: signup start", email.value.trim());
+
+      const { error } = await supabase.auth.signUp({
+        email: email.value.trim(),
+        password: password.value
+      });
+
+      if (error) {
+        authMsg.textContent = "Erro: " + error.message;
+        logDbg("DEBUG: signup error", error.message);
+        alert("Erro no cadastro: " + error.message);
+        return;
+      }
+
+      authMsg.textContent = "Usuário criado. Tente entrar.";
+      logDbg("DEBUG: signup ok ✅");
+    }
+
+    async function login() {
+      if (!supabase) {
+        authMsg.textContent = "Erro: Cliente Supabase não inicializado";
+        return;
+      }
+      
+      const e = email.value.trim();
+      authMsg.textContent = "Entrando...";
+      logDbg("DEBUG: login click ✅", e);
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: e,
+        password: password.value
+      });
+
+      logDbg("DEBUG: signIn retorno", { ok: !error, error: error?.message });
+
+      if (error) {
+        authMsg.textContent = "Erro: " + error.message;
+        alert("Erro no login: " + error.message);
+        return;
+      }
+
+      authMsg.textContent = "Login OK ✅";
+      await setUIForSession();
+    }
+
+    async function logout() {
+      if (!supabase) return;
+      await supabase.auth.signOut();
+      logDbg("DEBUG: logout ✅");
+      await setUIForSession();
+    }
+
+    async function addRegistro() {
+      if (!supabase) {
+        appMsg.textContent = "Erro: Cliente Supabase não inicializado";
+        return;
+      }
+      
+      const payload = {
+        data_entrada_ulap: toISODate(f_data_entrada_ulap.value),
+        numero_histopatologico: f_numero_histopatologico.value.trim(),
+        paciente: f_paciente.value.trim(),
+        matricula_numero: f_matricula_numero.value.trim() || null,
+        data_solicitacao: toISODate(f_data_solicitacao.value),
+        painel_anticorpos: f_painel_anticorpos.value.trim() || null,
+        medico_patologista: f_medico_patologista.value.trim() || null,
+        ja_cadastrado: (f_ja_cadastrado.value === "true"),
+        numero_ihq: f_numero_ihq.value.trim() || null
+      };
+
+      if (!payload.numero_histopatologico) { appMsg.textContent = "Informe o Número histopatológico."; return; }
+      if (!payload.paciente) { appMsg.textContent = "Informe o Paciente."; return; }
+
+      appMsg.textContent = "Salvando...";
+      const { error } = await supabase.from("ulap_ihq").insert(payload);
+      if (error) { appMsg.textContent = "Erro ao adicionar: " + error.message; return; }
+
+      f_data_entrada_ulap.value = "";
+      f_numero_histopatologico.value = "";
+      f_paciente.value = "";
+      f_matricula_numero.value = "";
+      f_data_solicitacao.value = "";
+      f_painel_anticorpos.value = "";
+      f_medico_patologista.value = "";
+      f_ja_cadastrado.value = "false";
+      f_numero_ihq.value = "";
+
+      appMsg.textContent = "";
+      await loadRegistros();
+    }
+
+    async function updateStatus(id, ja_cadastrado) {
+      if (!supabase) return;
+      const { error } = await supabase
+        .from("ulap_ihq")
+        .update({ ja_cadastrado })
+        .eq("id", id);
+
+      if (error) appMsg.textContent = "Erro ao atualizar status: " + error.message;
+      else appMsg.textContent = "";
+    }
+
+    async function deleteRegistro(id) {
+      if (!supabase) return;
+      const { error } = await supabase.from("ulap_ihq").delete().eq("id", id);
+      if (error) appMsg.textContent = "Erro ao excluir: " + error.message;
+      else appMsg.textContent = "";
+    }
+
+    async function loadRegistros() {
+      if (!supabase) {
+        appMsg.textContent = "Erro: Cliente Supabase não inicializado";
+        return;
+      }
+      
+      appMsg.textContent = "Carregando...";
+      const { data, error } = await supabase
+        .from("ulap_ihq")
+        .select("id, data_entrada_ulap, numero_histopatologico, paciente, matricula_numero, data_solicitacao, painel_anticorpos, medico_patologista, ja_cadastrado, numero_ihq, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) { appMsg.textContent = "Erro ao carregar: " + error.message; return; }
+
+      cache = data ?? [];
+      appMsg.textContent = cache.length ? "" : "Sem registros ainda.";
       applyFiltersAndRender();
+    }
+
+    // Bind events (sem depender de ordem de script)
+    document.addEventListener("DOMContentLoaded", () => {
+      logDbg("DEBUG: DOMContentLoaded ✅");
+
+      document.getElementById("btnLogin").addEventListener("click", login);
+      document.getElementById("btnSignup").addEventListener("click", signup);
+      document.getElementById("btnLogout").addEventListener("click", logout);
+      document.getElementById("btnAdd").addEventListener("click", addRegistro);
+      document.getElementById("btnRefresh").addEventListener("click", loadRegistros);
+
+      // Prevenir submit do formulário com Enter
+      document.getElementById("loginForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        login();
+      });
+
+      search.addEventListener("input", applyFiltersAndRender);
+      filterStatus.addEventListener("change", applyFiltersAndRender);
+
+      if (supabase) {
+        supabase.auth.onAuthStateChange(() => setUIForSession());
+        setUIForSession();
+      } else {
+        logDbg("DEBUG: supabase não disponível para onAuthStateChange");
+      }
     });
-
-    tr.querySelector('button[data-del]').addEventListener("click", async (ev) => {
-      const id = Number(ev.target.getAttribute("data-del"));
-      if (!confirm("Excluir este registro?")) return;
-      await deleteRegistro(id);
-      cache = cache.filter(x => x.id !== id);
-      applyFiltersAndRender();
-    });
-
-    tbody.appendChild(tr);
-  }
-}
-
-async function setUIForSession() {
-  if (!supabase) {
-    logDbg("DEBUG: supabase não está definido!");
-    return;
-  }
-  
-  const { data: { session }, error } = await supabase.auth.getSession();
-  logDbg("DEBUG: getSession", { hasSession: !!session, error: error?.message });
-
-  const logged = !!session;
-  authBox.classList.toggle("hidden", logged);
-  appBox.classList.toggle("hidden", !logged);
-  btnLogout.classList.toggle("hidden", !logged);
-
-  if (logged) await loadRegistros();
-  else { cache = []; tbody.innerHTML = ""; }
-}
-
-async function signup() {
-  if (!supabase) {
-    authMsg.textContent = "Erro: Cliente Supabase não inicializado";
-    return;
-  }
-  
-  authMsg.textContent = "Criando usuário...";
-  logDbg("DEBUG: signup start", email.value.trim());
-
-  const { error } = await supabase.auth.signUp({
-    email: email.value.trim(),
-    password: password.value
-  });
-
-  if (error) {
-    authMsg.textContent = "Erro: " + error.message;
-    logDbg("DEBUG: signup error", error.message);
-    alert("Erro no cadastro: " + error.message);
-    return;
-  }
-
-  authMsg.textContent = "Usuário criado. Tente entrar.";
-  logDbg("DEBUG: signup ok ✅");
-}
-
-async function login() {
-  if (!supabase) {
-    authMsg.textContent = "Erro: Cliente Supabase não inicializado";
-    return;
-  }
-  
-  const e = email.value.trim();
-  authMsg.textContent = "Entrando...";
-  logDbg("DEBUG: login click ✅", e);
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: e,
-    password: password.value
-  });
-
-  logDbg("DEBUG: signIn retorno", { ok: !error, error: error?.message });
-
-  if (error) {
-    authMsg.textContent = "Erro: " + error.message;
-    alert("Erro no login: " + error.message);
-    return;
-  }
-
-  authMsg.textContent = "Login OK ✅";
-  await setUIForSession();
-}
-
-async function logout() {
-  if (!supabase) return;
-  await supabase.auth.signOut();
-  logDbg("DEBUG: logout ✅");
-  await setUIForSession();
-}
-
-async function addRegistro() {
-  if (!supabase) {
-    appMsg.textContent = "Erro: Cliente Supabase não inicializado";
-    return;
-  }
-  
-  const payload = {
-    data_entrada_ulap: toISODate(f_data_entrada_ulap.value),
-    numero_histopatologico: f_numero_histopatologico.value.trim(),
-    paciente: f_paciente.value.trim(),
-    matricula_numero: f_matricula_numero.value.trim() || null,
-    data_solicitacao: toISODate(f_data_solicitacao.value),
-    painel_anticorpos: f_painel_anticorpos.value.trim() || null,
-    medico_patologista: f_medico_patologista.value.trim() || null,
-    ja_cadastrado: (f_ja_cadastrado.value === "true"),
-    numero_ihq: f_numero_ihq.value.trim() || null
-  };
-
-  if (!payload.numero_histopatologico) { appMsg.textContent = "Informe o Número histopatológico."; return; }
-  if (!payload.paciente) { appMsg.textContent = "Informe o Paciente."; return; }
-
-  appMsg.textContent = "Salvando...";
-  const { error } = await supabase.from("ulap_ihq").insert(payload);
-  if (error) { appMsg.textContent = "Erro ao adicionar: " + error.message; return; }
-
-  f_data_entrada_ulap.value = "";
-  f_numero_histopatologico.value = "";
-  f_paciente.value = "";
-  f_matricula_numero.value = "";
-  f_data_solicitacao.value = "";
-  f_painel_anticorpos.value = "";
-  f_medico_patologista.value = "";
-  f_ja_cadastrado.value = "false";
-  f_numero_ihq.value = "";
-
-  appMsg.textContent = "";
-  await loadRegistros();
-}
-
-async function updateStatus(id, ja_cadastrado) {
-  if (!supabase) return;
-  const { error } = await supabase
-    .from("ulap_ihq")
-    .update({ ja_cadastrado })
-    .eq("id", id);
-
-  if (error) appMsg.textContent = "Erro ao atualizar status: " + error.message;
-  else appMsg.textContent = "";
-}
-
-async function deleteRegistro(id) {
-  if (!supabase) return;
-  const { error } = await supabase.from("ulap_ihq").delete().eq("id", id);
-  if (error) appMsg.textContent = "Erro ao excluir: " + error.message;
-  else appMsg.textContent = "";
-}
-
-async function loadRegistros() {
-  if (!supabase) {
-    appMsg.textContent = "Erro: Cliente Supabase não inicializado";
-    return;
-  }
-  
-  appMsg.textContent = "Carregando...";
-  const { data, error } = await supabase
-    .from("ulap_ihq")
-    .select("id, data_entrada_ulap, numero_histopatologico, paciente, matricula_numero, data_solicitacao, painel_anticorpos, medico_patologista, ja_cadastrado, numero_ihq, created_at")
-    .order("created_at", { ascending: false });
-
-  if (error) { appMsg.textContent = "Erro ao carregar: " + error.message; return; }
-
-  cache = data ?? [];
-  appMsg.textContent = cache.length ? "" : "Sem registros ainda.";
-  applyFiltersAndRender();
-}
-
-// Bind events (sem depender de ordem de script)
-document.addEventListener("DOMContentLoaded", () => {
-  logDbg("DEBUG: DOMContentLoaded ✅");
-
-  document.getElementById("btnLogin").addEventListener("click", login);
-  document.getElementById("btnSignup").addEventListener("click", signup);
-  document.getElementById("btnLogout").addEventListener("click", logout);
-  document.getElementById("btnAdd").addEventListener("click", addRegistro);
-  document.getElementById("btnRefresh").addEventListener("click", loadRegistros);
-
-  search.addEventListener("input", applyFiltersAndRender);
-  filterStatus.addEventListener("change", applyFiltersAndRender);
-
-  if (supabase) {
-    supabase.auth.onAuthStateChange(() => setUIForSession());
-    setUIForSession();
-  } else {
-    logDbg("DEBUG: supabase não disponível para onAuthStateChange");
-  }
-});
-
-
-
-
+  </script>
+</body>
+</html>
