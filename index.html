@@ -46,7 +46,7 @@
   <div class="card">
     <div class="row">
       <h2 style="margin: 0;">ULAP — Controle de Solicitações IHQ</h2>
-      <button id="btnLogout" class="secondary right hidden">Sair</button>
+     <button id="btnLogout" type="button" class="secondary right hidden">Sair</button>
     </div>
     <p class="muted" style="margin-top: 6px;">Login obrigatório. Hospedado no GitHub Pages + dados no Supabase.</p>
 
@@ -60,8 +60,8 @@
         <label>Senha
           <input id="password" type="password" placeholder="••••••••" />
         </label>
-       <button id="btnLogin" onclick="login()">Entrar</button>
-        <button id="btnSignup" class="secondary">Criar usuário</button>
+       <button id="btnLogin" type="button">Entrar</button>
+      <button id="btnSignup" type="button" class="secondary">Criar usuário</button>
       </div>
       <p id="authMsg" class="muted"></p>
     </div>
@@ -110,7 +110,7 @@
           </select>
         </label>
 
-        <button id="btnAdd">Adicionar</button>
+       <button id="btnAdd" type="button">Adicionar</button>
       </div>
 
       <div class="toolbar">
@@ -120,7 +120,7 @@
           <option value="pending">Pendentes</option>
           <option value="done">Já cadastrados</option>
         </select>
-        <button id="btnRefresh" class="secondary">Atualizar</button>
+        <button id="btnRefresh" type="button" class="secondary">Atualizar</button>
         <span id="appMsg" class="muted"></span>
       </div>
 
@@ -417,6 +417,7 @@ window.login = login;
 <div style="position:fixed;bottom:10px;right:10px;background:#ff0;padding:6px 10px;border:1px solid #000;z-index:99999">
   VERSÃO 002
 </div>
+
 
 
 
